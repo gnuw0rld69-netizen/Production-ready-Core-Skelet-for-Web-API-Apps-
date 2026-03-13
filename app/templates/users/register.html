@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      <div class="section-title mb-3">{{ t["register.title"] }}</div>
+      {% if already_authenticated %}
+      <div class="alert alert-info">{{ t["register.already_authed"] }}</div>
+      {% endif %}
+      <form method="post" action="/{{ lang }}/users/register" class="mb-3">
+        <div class="mb-2">
+          <label class="form-label">{{ t["auth.email"] }}</label>
+          <input class="form-control" name="email" type="email" required {% if already_authenticated %}disabled{% endif %} />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["register.username"] }}</label>
+          <input class="form-control" name="username" type="text" required {% if already_authenticated %}disabled{% endif %} />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["register.full_name"] }}</label>
+          <input class="form-control" name="full_name" type="text" {% if already_authenticated %}disabled{% endif %} />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">{{ t["register.password"] }}</label>
+          <input class="form-control" name="password" type="password" required {% if already_authenticated %}disabled{% endif %} />
+        </div>
+        <button class="btn btn-primary w-100" type="submit" {% if already_authenticated %}disabled{% endif %}>{{ t["register.submit"] }}</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4 mb-4">
+      <div class="section-title mb-3">{{ t["register.verify.title"] }}</div>
+      <p class="text-muted">{{ t["register.verify.desc"] }}</p>
+      <a class="btn btn-outline-success w-100" href="/{{ lang }}/users/verify">{{ t["register.verify.cta"] }}</a>
+    </div>
+
+    <div class="card p-4">
+      <div class="section-title mb-3">{{ t["register.reset.title"] }}</div>
+      <p class="text-muted">{{ t["register.reset.desc"] }}</p>
+      <a class="btn btn-outline-warning w-100" href="/{{ lang }}/users/reset">{{ t["register.reset.cta"] }}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

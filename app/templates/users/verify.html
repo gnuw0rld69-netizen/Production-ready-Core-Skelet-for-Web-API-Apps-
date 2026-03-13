@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      <div class="section-title mb-3">{{ t["verify.title"] }}</div>
+      <form method="post" action="/{{ lang }}/users/register/verify-email" class="mb-3">
+        <label class="form-label">{{ t["verify.token"] }}</label>
+        <input class="form-control mb-2" name="token" type="text" required />
+        <button class="btn btn-outline-success w-100" type="submit">{{ t["verify.submit"] }}</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4">
+      <div class="section-title mb-3">{{ t["verify.resend.title"] }}</div>
+      <form method="post" action="/{{ lang }}/users/register/resend-verification">
+        <label class="form-label">{{ t["verify.resend.email"] }}</label>
+        <input class="form-control mb-2" name="email" type="email" required />
+        <button class="btn btn-outline-primary w-100" type="submit">{{ t["verify.resend.submit"] }}</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

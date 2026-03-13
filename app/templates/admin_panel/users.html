@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title display-6 fw-semibold">{{ t["admin.users.title"] }}</h1>
+    <p class="text-muted">{{ t["admin.users.subtitle"] }}</p>
+  </div>
+
+  {% if not admin_user %}
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="text-muted">{{ t["admin.no_access"] }}</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 col-lg-3">
+    <div class="card p-3">
+      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
+      <div class="nav flex-column nav-pills">
+        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <div class="card p-4">
+          <div class="section-title mb-3">{{ t["admin.menu.users"] }}</div>
+          <form method="get" action="/{{ lang }}/admin_panel/users" class="mb-3">
+            <div class="row g-2">
+              <div class="col-12 col-md-6">
+                <input class="form-control" name="role" type="text" placeholder="{{ t["admin.users.role_filter"] }}" />
+              </div>
+              <div class="col-12 col-md-6">
+                <input class="form-control" name="user_id" type="number" placeholder="{{ t["admin.users.user_id_filter"] }}" />
+              </div>
+            </div>
+            <button class="btn btn-outline-dark w-100 mt-2" type="submit">{{ t["admin.users.filter"] }}</button>
+          </form>
+
+          {% if users %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>{{ t["admin.users.id"] }}</th>
+              <th>{{ t["admin.users.email"] }}</th>
+              <th>{{ t["admin.users.role"] }}</th>
+              <th>{{ t["admin.users.status"] }}</th>
+            </tr>
+          </thead>
+              <tbody>
+                {% for user in users %}
+                <tr>
+                  <td>{{ user.id }}</td>
+                  <td>{{ user.email }}</td>
+                  <td>{{ user.role.value }}</td>
+                  <td>{{ t["status.active"] if user.is_active else t["status.inactive"] }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted">{{ t["admin.users.no_users"] }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card p-4">
+          <div class="section-title mb-3">{{ t["admin.users.actions"] }}</div>
+          <form method="post" action="/{{ lang }}/admin_panel/users/update" class="mb-3">
+            <div class="mb-2">
+              <label class="form-label">{{ t["admin.users.user_id"] }}</label>
+              <input class="form-control" name="user_id" type="number" required />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">{{ t["admin.users.email"] }}</label>
+              <input class="form-control" name="email" type="email" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">{{ t["admin.users.full_name"] }}</label>
+              <input class="form-control" name="full_name" type="text" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">{{ t["admin.users.new_password"] }}</label>
+              <input class="form-control" name="password" type="password" />
+            </div>
+            <button class="btn btn-outline-primary w-100" type="submit">{{ t["admin.users.update"] }}</button>
+          </form>
+
+          <form method="post" action="/{{ lang }}/admin_panel/users/role" class="mb-3">
+            <label class="form-label">{{ t["admin.users.role"] }}</label>
+            <div class="input-group">
+              <input class="form-control" name="user_id" type="number" placeholder="{{ t["admin.users.user_id"] }}" required />
+              <input class="form-control" name="role" type="text" placeholder="{{ t["admin.users.role"] }}" required />
+              <button class="btn btn-outline-secondary" type="submit">{{ t["admin.users.update_action"] }}</button>
+            </div>
+          </form>
+
+          <div class="d-flex gap-2 mb-3">
+            <form method="post" action="/{{ lang }}/admin_panel/users/activate" class="flex-fill">
+              <input class="form-control mb-2" name="user_id" type="number" placeholder="{{ t["admin.users.user_id"] }}" required />
+              <button class="btn btn-outline-success w-100" type="submit">{{ t["admin.users.activate"] }}</button>
+            </form>
+            <form method="post" action="/{{ lang }}/admin_panel/users/deactivate" class="flex-fill">
+              <input class="form-control mb-2" name="user_id" type="number" placeholder="{{ t["admin.users.user_id"] }}" required />
+              <button class="btn btn-outline-danger w-100" type="submit">{{ t["admin.users.deactivate"] }}</button>
+            </form>
+          </div>
+
+          <div class="d-flex gap-2">
+            <form method="post" action="/{{ lang }}/admin_panel/users/verify-email" class="flex-fill">
+              <input class="form-control mb-2" name="user_id" type="number" placeholder="{{ t["admin.users.user_id"] }}" required />
+              <button class="btn btn-outline-info w-100" type="submit">{{ t["admin.users.verify_email"] }}</button>
+            </form>
+            <form method="post" action="/{{ lang }}/admin_panel/users/2fa/disable" class="flex-fill">
+              <input class="form-control mb-2" name="user_id" type="number" placeholder="{{ t["admin.users.user_id"] }}" required />
+              <button class="btn btn-outline-warning w-100" type="submit">{{ t["admin.users.disable_2fa"] }}</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

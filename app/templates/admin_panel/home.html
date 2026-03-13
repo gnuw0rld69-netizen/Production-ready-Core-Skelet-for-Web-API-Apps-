@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title display-6 fw-semibold">{{ t["admin.title"] }}</h1>
+    <p class="text-muted">{{ t["admin.subtitle"] }}</p>
+  </div>
+
+  {% if not admin_user %}
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="text-muted">{{ t["admin.no_access"] }}</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 col-lg-3">
+    <div class="card p-3">
+      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
+      <div class="nav flex-column nav-pills">
+        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    <div class="row g-4">
+      <div class="col-12 col-lg-6">
+        <div class="card p-4 h-100">
+          <div class="section-title mb-3">{{ t["admin.users.title"] }}</div>
+          <p class="text-muted">{{ t["admin.users.subtitle"] }}</p>
+          <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-6">
+        <div class="card p-4 h-100">
+          <div class="section-title mb-3">{{ t["admin.menu.allowlist"] }}</div>
+          <p class="text-muted">{{ t["admin.allowlist.subtitle"] }}</p>
+          <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

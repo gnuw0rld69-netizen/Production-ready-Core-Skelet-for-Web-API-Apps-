@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title display-6 fw-semibold">{{ t["home.title"] }}</h1>
+    <p class="text-muted">{{ t["home.subtitle"] }}</p>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card p-4 h-100">
+      <div class="section-title mb-3">{{ t["home.users.title"] }}</div>
+      <p class="text-muted">{{ t["home.users.desc"] }}</p>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-dark" href="/{{ lang }}/users/auth">{{ t["home.users.login"] }}</a>
+        <a class="btn btn-outline-primary" href="/{{ lang }}/users/register">{{ t["home.users.register"] }}</a>
+        {% if user %}
+        <a class="btn btn-outline-secondary" href="/{{ lang }}/users/profile">{{ t["home.users.profile"] }}</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% if user %}
+  <div class="col-12">
+    <div class="card p-4">
+      <div class="section-title mb-3">{{ t["home.signed_in"] }}</div>
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <div class="fw-semibold">{{ user.email }}</div>
+        <span class="badge text-bg-light">{{ user.role.value }}</span>
+        <span class="badge text-bg-{{ "success" if user.is_two_factor_enabled else "secondary" }}">
+          2FA {{ t["home.2fa.enabled"] if user.is_two_factor_enabled else t["home.2fa.disabled"] }}
+        </span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
