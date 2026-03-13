@@ -1,4 +1,4 @@
-# Auth Service with FastAPI
+#Core Web Skelet with FastAPI
 
 Production-ready authentication and authorization service built with FastAPI, JWT, MariaDB, and Redis.
 
