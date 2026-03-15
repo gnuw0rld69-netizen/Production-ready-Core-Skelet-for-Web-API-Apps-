@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title display-6 fw-semibold">{{ t["cms.admin.title"] }}</h1>
+    <p class="text-muted">{{ t["cms.admin.subtitle"] }}</p>
+  </div>
+
+  <div class="col-12 col-lg-3">
+    <div class="card p-3">
+      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
+      <div class="nav flex-column nav-pills">
+        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        {% if modules %}
+        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
+        {% for module in modules %}
+        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    <div class="card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title">{{ t["cms.admin.pages.form"] }}</div>
+        {% if page %}
+        <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
+        {% endif %}
+      </div>
+
+      <form method="post" action="/{% if page %}{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/update{% else %}{{ lang }}/admin_panel/module_cms_module/create{% endif %}">
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.title_label"] }}</label>
+          <input class="form-control" name="title" type="text" value="{{ page.title if page else "" }}" required />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.slug"] }}</label>
+          <input class="form-control" name="slug" type="text" value="{{ page.slug if page else "" }}" required />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.lang"] }}</label>
+          <select class="form-select" name="page_lang" required>
+            <option value="ru" {% if page and page.lang == "ru" %}selected{% endif %}>RU</option>
+            <option value="en" {% if page and page.lang == "en" %}selected{% endif %}>EN</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.access"] }}</label>
+          <select class="form-select" name="access_level">
+            <option value="public" {% if page and page.access_level.value == "public" %}selected{% endif %}>{{ t["cms.access.public"] }}</option>
+            <option value="auth" {% if page and page.access_level.value == "auth" %}selected{% endif %}>{{ t["cms.access.auth"] }}</option>
+            <option value="role" {% if page and page.access_level.value == "role" %}selected{% endif %}>{{ t["cms.access.role"] }}</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.allowed_roles"] }}</label>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="allowed_roles" value="moderator" {% if "moderator" in allowed_roles %}checked{% endif %} />
+              <label class="form-check-label">{{ t["cms.role.moderator"] }}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="allowed_roles" value="admin" {% if "admin" in allowed_roles %}checked{% endif %} />
+              <label class="form-check-label">{{ t["cms.role.admin"] }}</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="allowed_roles" value="superuser" {% if "superuser" in allowed_roles %}checked{% endif %} />
+              <label class="form-check-label">{{ t["cms.role.superuser"] }}</label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.content"] }}</label>
+          <textarea class="form-control" name="content_html" rows="12" required>{{ page.content_html if page else "" }}</textarea>
+        </div>
+        <div class="d-flex flex-wrap gap-4 mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_published" value="true" {% if page and page.is_published %}checked{% endif %} />
+            <label class="form-check-label">{{ t["cms.admin.pages.is_published"] }}</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_root" value="true" {% if page and page.is_root %}checked{% endif %} />
+            <label class="form-check-label">{{ t["cms.admin.pages.is_root"] }}</label>
+          </div>
+        </div>
+        <button class="btn btn-outline-primary w-100" type="submit">
+          {{ t["cms.admin.pages.update"] if page else t["cms.admin.pages.save"] }}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

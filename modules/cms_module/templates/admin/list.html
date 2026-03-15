@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title display-6 fw-semibold">{{ t["cms.admin.title"] }}</h1>
+    <p class="text-muted">{{ t["cms.admin.subtitle"] }}</p>
+  </div>
+
+  {% if not admin_user %}
+  <div class="col-12">
+    <div class="card p-4">
+      <p class="text-muted">{{ t["admin.no_access"] }}</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12 col-lg-3">
+    <div class="card p-3">
+      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
+      <div class="nav flex-column nav-pills">
+        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        {% if modules %}
+        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
+        {% for module in modules %}
+        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-9">
+    <div class="card p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="section-title">{{ t["cms.admin.pages.title"] }}</div>
+        <a class="btn btn-outline-primary btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/new">{{ t["cms.admin.pages.create"] }}</a>
+      </div>
+      {% if pages %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>{{ t["cms.admin.pages.id"] }}</th>
+              <th>{{ t["cms.admin.pages.title_label"] }}</th>
+              <th>{{ t["cms.admin.pages.slug"] }}</th>
+              <th>{{ t["cms.admin.pages.lang"] }}</th>
+              <th>{{ t["cms.admin.pages.access"] }}</th>
+              <th>{{ t["cms.admin.pages.status"] }}</th>
+              <th>{{ t["cms.admin.pages.root"] }}</th>
+              <th>{{ t["cms.admin.pages.actions"] }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for page in pages %}
+            <tr>
+              <td>{{ page.id }}</td>
+              <td>{{ page.title }}</td>
+              <td>{{ page.slug }}</td>
+              <td>{{ page.lang }}</td>
+              <td>{{ t["cms.access." ~ page.access_level.value] }}</td>
+              <td>{{ t["status.enabled"] if page.is_published else t["status.disabled"] }}</td>
+              <td>{{ t["status.enabled"] if page.is_root else t["status.disabled"] }}</td>
+              <td>
+                <div class="d-flex flex-wrap gap-2">
+                  <a class="btn btn-outline-secondary btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}">{{ t["cms.admin.pages.edit"] }}</a>
+                  <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
+                  <form method="post" action="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/delete">
+                    <button class="btn btn-outline-danger btn-sm" type="submit">{{ t["cms.admin.pages.delete"] }}</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted">{{ t["cms.admin.pages.none"] }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
