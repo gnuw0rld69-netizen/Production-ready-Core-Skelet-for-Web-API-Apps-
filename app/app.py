@@ -4,6 +4,8 @@ import time
 from contextlib import asynccontextmanager
 from collections.abc import Awaitable, Callable
 from typing import cast
+import inspect
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import RedirectResponse
@@ -22,13 +24,17 @@ from app.core.redis import close_redis_client
 from app.core.security import InvalidTokenError, decode_token
 from app.routers import auth_router, users_router, web_admin_router, web_users_router
 from app.services.audit_service import AuditService
+from app.module_loader import load_modules
 
 USER_ACTION_PATH_PREFIXES = ("/api/v1/auth", "/api/v1/users")
 USER_ID_PATH_REGEX = re.compile(r"^/api/v1/users/(?P<user_id>\d+)(?:/|$)")
-WEB_UI_PATH_PREFIXES = ("/ru/users", "/en/users", "/ru/admin_panel", "/en/admin_panel")
+WEB_UI_PATH_PREFIXES = ("/ru", "/en")
 
 audit_worker_stop_event = threading.Event()
 audit_worker_thread: threading.Thread | None = None
+
+MODULES_DIR = Path(__file__).resolve().parents[1] / "modules"
+MODULES = load_modules(MODULES_DIR)
 
 
 def _extract_actor_user_id(request: Request) -> int | None:
@@ -72,6 +78,9 @@ async def lifespan(_: FastAPI):
     global audit_worker_thread
     if settings.AUTO_CREATE_TABLES:
         Base.metadata.create_all(bind=engine)
+        for module in MODULES:
+            for metadata in module.metadata:
+                metadata.create_all(bind=engine)
 
     audit_worker_stop_event.clear()
     audit_worker_thread = threading.Thread(
@@ -97,6 +106,10 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+app.state.modules = MODULES
+app.state.module_admin_entries = [m.admin_entry for m in MODULES if m.admin_entry]
+app.state.module_root_handlers = [m.root_handler for m in MODULES if m.root_handler]
 
 if settings.CORS_ORIGINS:
     app.add_middleware(
@@ -221,10 +234,22 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
 app.include_router(web_users_router)
 app.include_router(web_admin_router)
+for module in MODULES:
+    for router in module.routers:
+        app.include_router(router)
 
 
 @app.get("/")
-async def root():
+async def root(request: Request):
+    for handler in request.app.state.module_root_handlers:
+        if handler is None:
+            continue
+        if inspect.iscoroutinefunction(handler):
+            response = await handler(request)
+        else:
+            response = handler(request)
+        if response is not None:
+            return response
     return RedirectResponse(url="/ru/users/", status_code=307)
 
 

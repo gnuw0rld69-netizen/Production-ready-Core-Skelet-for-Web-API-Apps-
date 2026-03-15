@@ -21,6 +21,12 @@
         <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
         <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
         <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        {% if modules %}
+        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
+        {% for module in modules %}
+        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
+        {% endfor %}
+        {% endif %}
       </div>
     </div>
   </div>

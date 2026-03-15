@@ -36,6 +36,8 @@ app/
   services/
   models/
   schemas/
+modules/
+  cms_module/
 alembic/
   env.py
   versions/
@@ -136,6 +138,26 @@ Copy `.env.example` to `.env` and adjust values.
 - Reset password: `/{lang}/users/reset`
 - Profile: `/{lang}/users/profile`
 - Admin panel: `/{lang}/admin_panel/`
+
+## Modules
+
+Modules are loaded automatically from the `/modules` directory. Each module provides its own routes,
+templates, and database tables (prefixed with the module name).
+
+Module manifests drive dynamic admin UI entries in `/admin_panel` and define the module's routers,
+templates directory, and metadata for table creation.
+
+### CMS Module
+
+- Admin UI: `/{lang}/admin_panel/module_cms_module`
+- Pages: `/{lang}/pages/{slug}`
+- Root page: if a published CMS page is marked as root for a language, it can replace `/`.
+
+Access levels:
+
+- `public`: visible to everyone
+- `auth`: visible only to authenticated and verified users
+- `role`: visible only to moderator/admin/superuser as configured
 
 ## Authentication
 

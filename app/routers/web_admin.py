@@ -13,7 +13,7 @@ from app.models.user import User, UserRole
 from app.schemas.user import UserUpdate
 from app.services.user_ip_allowlist_service import UserIpAllowlistService
 from app.services.user_service import UserService
-from app.routers.web_users import _get_current_user_from_cookie
+from app.web.session import get_current_user_from_cookie as _get_current_user_from_cookie
 
 TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
@@ -46,6 +46,7 @@ def admin_home(request: Request, lang: str):
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
         message = request.query_params.get("message")
+        modules = request.app.state.module_admin_entries
         return templates.TemplateResponse(
             "admin_panel/home.html",
             {
@@ -55,6 +56,7 @@ def admin_home(request: Request, lang: str):
                 "message": message,
                 "lang": lang,
                 "t": t,
+                "modules": modules,
             },
         )
     finally:
@@ -69,6 +71,7 @@ def admin_users_page(request: Request, lang: str, role: str | None = None, user_
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
         message = request.query_params.get("message")
+        modules = request.app.state.module_admin_entries
         users = []
         target_user = None
         if admin_user:
@@ -92,6 +95,7 @@ def admin_users_page(request: Request, lang: str, role: str | None = None, user_
                 "message": message,
                 "lang": lang,
                 "t": t,
+                "modules": modules,
             },
         )
     finally:
@@ -106,6 +110,7 @@ def admin_allowlist_page(request: Request, lang: str, user_id: int | None = None
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
         message = request.query_params.get("message")
+        modules = request.app.state.module_admin_entries
         target_user = None
         allowlist_entries = []
         if admin_user and user_id:
@@ -123,6 +128,7 @@ def admin_allowlist_page(request: Request, lang: str, user_id: int | None = None
                 "message": message,
                 "lang": lang,
                 "t": t,
+                "modules": modules,
             },
         )
     finally:

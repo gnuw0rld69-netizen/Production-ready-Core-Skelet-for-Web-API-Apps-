@@ -21,29 +21,53 @@
         <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
         <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
         <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        {% if modules %}
+        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
+        {% for module in modules %}
+        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
+        {% endfor %}
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <div class="col-12 col-lg-9">
-    <div class="row g-4">
-      <div class="col-12 col-lg-6">
-        <div class="card p-4 h-100">
-          <div class="section-title mb-3">{{ t["admin.users.title"] }}</div>
-          <p class="text-muted">{{ t["admin.users.subtitle"] }}</p>
-          <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+    <div class="col-12 col-lg-9">
+      <div class="row g-4">
+        <div class="col-12 col-lg-6">
+          <div class="card p-4 h-100">
+            <div class="section-title mb-3">{{ t["admin.users.title"] }}</div>
+            <p class="text-muted">{{ t["admin.users.subtitle"] }}</p>
+            <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
+          </div>
         </div>
-      </div>
 
-      <div class="col-12 col-lg-6">
-        <div class="card p-4 h-100">
-          <div class="section-title mb-3">{{ t["admin.menu.allowlist"] }}</div>
-          <p class="text-muted">{{ t["admin.allowlist.subtitle"] }}</p>
-          <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+        <div class="col-12 col-lg-6">
+          <div class="card p-4 h-100">
+            <div class="section-title mb-3">{{ t["admin.menu.allowlist"] }}</div>
+            <p class="text-muted">{{ t["admin.allowlist.subtitle"] }}</p>
+            <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
+          </div>
         </div>
+
+        {% if modules %}
+        <div class="col-12">
+          <div class="card p-4">
+            <div class="section-title mb-3">{{ t["admin.menu.modules"] }}</div>
+            <div class="row g-3">
+              {% for module in modules %}
+              <div class="col-12 col-md-6">
+                <div class="border rounded p-3 h-100 d-flex flex-column justify-content-between">
+                  <div class="fw-semibold">{{ module.label }}</div>
+                  <a class="btn btn-outline-primary btn-sm mt-3" href="/{{ lang }}{{ module.path }}">{{ t["admin.menu.open"] }}</a>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
-  </div>
   {% endif %}
 </div>
 {% endblock %}
