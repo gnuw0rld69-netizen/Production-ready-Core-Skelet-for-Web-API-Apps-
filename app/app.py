@@ -78,9 +78,6 @@ async def lifespan(_: FastAPI):
     global audit_worker_thread
     if settings.AUTO_CREATE_TABLES:
         Base.metadata.create_all(bind=engine)
-        for module in MODULES:
-            for metadata in module.metadata:
-                metadata.create_all(bind=engine)
 
     audit_worker_stop_event.clear()
     audit_worker_thread = threading.Thread(

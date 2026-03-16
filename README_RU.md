@@ -145,6 +145,16 @@ requirements.txt
 
 Каждый модуль содержит собственные переводы в `modules/<module>/i18n/`.
 
+### Инициализация БД для модулей
+
+Таблицы модулей управляются через Alembic. Контекст миграций автоматически загружает метаданные
+модулей, поэтому `alembic revision --autogenerate` включает модульные таблицы.
+
+```bash
+alembic revision --autogenerate -m "add cms module"
+alembic upgrade head
+```
+
 ### CMS модуль
 
 - Админ интерфейс: `/{lang}/admin_panel/module_cms_module`

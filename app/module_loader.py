@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from typing import Any, Callable
+import importlib
 import sys
 
 from fastapi import APIRouter
@@ -21,7 +22,9 @@ class ModuleInfo:
 
 
 def _load_module_from_path(module_path: Path):
-    module_name = f"modules.{module_path.parent.name}"
+    package_name = f"modules.{module_path.parent.name}"
+    module_name = f"{package_name}.module"
+    importlib.import_module(package_name)
     spec = spec_from_file_location(module_name, module_path)
     if not spec or not spec.loader:
         return None

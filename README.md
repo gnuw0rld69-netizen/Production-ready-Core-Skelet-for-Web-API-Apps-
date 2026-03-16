@@ -149,6 +149,16 @@ templates directory, and metadata for table creation.
 
 Each module also ships its own translations under `modules/<module>/i18n/`.
 
+### Module database initialization
+
+Module tables are managed through Alembic. The migration context loads module metadata automatically,
+so `alembic revision --autogenerate` will include module tables.
+
+```bash
+alembic revision --autogenerate -m "add cms module"
+alembic upgrade head
+```
+
 ### CMS Module
 
 - Admin UI: `/{lang}/admin_panel/module_cms_module`

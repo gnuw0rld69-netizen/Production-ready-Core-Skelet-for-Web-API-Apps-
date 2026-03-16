@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+from pathlib import Path
 from typing import Any, cast
 
 from alembic import context
@@ -6,6 +7,7 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.core.database import Base
+from app.module_loader import load_modules
 from app.models import user, user_action_log, user_ip_allowlist  # noqa: F401
 
 config = context.config
@@ -13,7 +15,11 @@ config = context.config
 if config.config_file_name:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+MODULES_DIR = Path(__file__).resolve().parents[1] / "modules"
+MODULES = load_modules(MODULES_DIR)
+MODULE_METADATA = [metadata for module in MODULES for metadata in module.metadata]
+
+target_metadata = [Base.metadata, *MODULE_METADATA]
 
 
 def get_url() -> str:
