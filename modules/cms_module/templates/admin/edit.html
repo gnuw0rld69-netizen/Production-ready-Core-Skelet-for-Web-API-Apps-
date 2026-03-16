@@ -8,20 +8,7 @@
   </div>
 
   <div class="col-12 col-lg-3">
-    <div class="card p-3">
-      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
-      <div class="nav flex-column nav-pills">
-        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
-        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
-        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
-        {% if modules %}
-        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
-        {% for module in modules %}
-        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
-        {% endfor %}
-        {% endif %}
-      </div>
-    </div>
+    {% include "admin/menu.html" %}
   </div>
 
   <div class="col-12 col-lg-9">
@@ -36,11 +23,27 @@
       <form method="post" action="/{% if page %}{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/update{% else %}{{ lang }}/admin_panel/module_cms_module/create{% endif %}">
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.title_label"] }}</label>
-          <input class="form-control" name="title" type="text" value="{{ page.title if page else "" }}" required />
+          <input class="form-control" id="cmsTitle" name="title" type="text" value="{{ page.title if page else "" }}" required />
         </div>
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.slug"] }}</label>
-          <input class="form-control" name="slug" type="text" value="{{ page.slug if page else "" }}" required />
+          <div class="input-group">
+            <input class="form-control" id="cmsSlug" name="slug" type="text" value="{{ page.slug if page else "" }}" required />
+            <button class="btn btn-outline-secondary" type="button" id="cmsSlugGenerate">{{ t["cms.admin.pages.slug_generate"] }}</button>
+          </div>
+          <div class="form-hint">{{ t["cms.admin.pages.slug_hint"] }}</div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.meta_title"] }}</label>
+          <input class="form-control" name="meta_title" type="text" value="{{ page.meta_title if page else "" }}" />
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.meta_description"] }}</label>
+          <textarea class="form-control" name="meta_description" rows="2">{{ page.meta_description if page else "" }}</textarea>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.meta_keywords"] }}</label>
+          <input class="form-control" name="meta_keywords" type="text" value="{{ page.meta_keywords if page else "" }}" />
         </div>
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.lang"] }}</label>
@@ -95,4 +98,36 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const titleInput = document.getElementById("cmsTitle");
+  const slugInput = document.getElementById("cmsSlug");
+  const slugButton = document.getElementById("cmsSlugGenerate");
+
+  const slugify = (value) => {
+    if (!value) return "";
+    const trimmed = value.trim().toLowerCase();
+    try {
+      return trimmed
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-");
+    } catch (err) {
+      return trimmed
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .replace(/-{2,}/g, "-");
+    }
+  };
+
+  slugButton?.addEventListener("click", () => {
+    if (!titleInput || !slugInput) return;
+    const suggestion = slugify(titleInput.value);
+    if (suggestion) {
+      slugInput.value = suggestion;
+    }
+  });
+</script>
 {% endblock %}

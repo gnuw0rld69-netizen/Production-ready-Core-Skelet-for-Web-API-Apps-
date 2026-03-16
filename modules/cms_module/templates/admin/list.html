@@ -15,20 +15,7 @@
   </div>
   {% else %}
   <div class="col-12 col-lg-3">
-    <div class="card p-3">
-      <div class="section-title mb-2">{{ t["admin.menu.title"] }}</div>
-      <div class="nav flex-column nav-pills">
-        <a class="nav-link" href="/{{ lang }}/admin_panel/">{{ t["admin.menu.overview"] }}</a>
-        <a class="nav-link" href="/{{ lang }}/admin_panel/users">{{ t["admin.menu.users"] }}</a>
-        <a class="nav-link" href="/{{ lang }}/admin_panel/allowlist">{{ t["admin.menu.allowlist"] }}</a>
-        {% if modules %}
-        <div class="section-title mt-3">{{ t["admin.menu.modules"] }}</div>
-        {% for module in modules %}
-        <a class="nav-link" href="/{{ lang }}{{ module.path }}">{{ module.label }}</a>
-        {% endfor %}
-        {% endif %}
-      </div>
-    </div>
+    {% include "admin/menu.html" %}
   </div>
 
   <div class="col-12 col-lg-9">
