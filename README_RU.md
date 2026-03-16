@@ -1,6 +1,5 @@
-# Auth Service с FastAPI
+# Production-ready authentication and authorization service built with FastAPI, JWT, MariaDB, and Redis.
 
-Готовый сервис аутентификации и авторизации на FastAPI, JWT, MariaDB и Redis.
 
 ## Возможности
 
