@@ -13,6 +13,7 @@ email-validator
 jinja2
 httpx
 redis
+itsdangerous
 pyotp
 qrcode[pil]
 pytest

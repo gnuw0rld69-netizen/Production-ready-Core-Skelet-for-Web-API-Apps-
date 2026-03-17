@@ -10,10 +10,14 @@
     {% include "admin/menu.html" %}
   </div>
   <div class="col-12 col-lg-9">
-    <div class="card p-4 mb-3">
-      <div class="cms-content">{{ page.content_html | safe }}</div>
+    <div class="mb-3">
+      {% if page_template %}
+      {% include "page_templates/" ~ page_template %}
+      {% else %}
+      {% include "page_templates/default.html" %}
+      {% endif %}
     </div>
-    <a class="btn btn-outline-secondary" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}">{{ t["cms.admin.pages.edit"] }}</a>
+    <a class="btn btn-outline-secondary" href="/{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}">{{ t["cms.admin.pages.edit"] }}</a>
     <a class="btn btn-outline-dark" href="/{{ lang }}/admin_panel/module_cms_module">{{ t["cms.admin.pages.back"] }}</a>
   </div>
 </div>

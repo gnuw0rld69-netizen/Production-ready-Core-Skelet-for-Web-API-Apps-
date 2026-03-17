@@ -1,14 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="row g-4">
-  <div class="col-12">
-    <h1 class="page-title display-6 fw-semibold">{{ page.title }}</h1>
-  </div>
-  <div class="col-12">
-    <div class="card p-4">
-      <div class="cms-content">{{ page.content_html | safe }}</div>
-    </div>
-  </div>
-</div>
+{% include "layout/header.html" %}
+{% if page_template %}
+{% include "page_templates/" ~ page_template %}
+{% else %}
+{% include "page_templates/default.html" %}
+{% endif %}
+{% include "layout/footer.html" %}
 {% endblock %}

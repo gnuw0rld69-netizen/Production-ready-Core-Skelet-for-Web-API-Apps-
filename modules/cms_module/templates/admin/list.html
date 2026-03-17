@@ -24,6 +24,23 @@
         <div class="section-title">{{ t["cms.admin.pages.title"] }}</div>
         <a class="btn btn-outline-primary btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/new">{{ t["cms.admin.pages.create"] }}</a>
       </div>
+      <form class="d-flex flex-wrap gap-2 mb-3" method="get" action="/{{ lang }}/admin_panel/module_cms_module/">
+        <select class="form-select" name="category_id">
+          <option value="">{{ t["cms.admin.pages.filter_all"] }}</option>
+          <option value="none" {% if category_filter == "none" %}selected{% endif %}>{{ t["cms.admin.pages.filter_none"] }}</option>
+          {% for category in categories %}
+          <option value="{{ category.id }}" {% if category_filter == category.id %}selected{% endif %}>
+            {{ category.title }} ({{ category.lang }})
+          </option>
+          {% endfor %}
+        </select>
+        <select class="form-select" name="sort">
+          <option value="category" {% if sort_mode == "category" %}selected{% endif %}>{{ t["cms.admin.pages.sort_category"] }}</option>
+          <option value="lang" {% if sort_mode == "lang" %}selected{% endif %}>{{ t["cms.admin.pages.sort_lang"] }}</option>
+          <option value="updated" {% if sort_mode == "updated" %}selected{% endif %}>{{ t["cms.admin.pages.sort_updated"] }}</option>
+        </select>
+        <button class="btn btn-outline-secondary" type="submit">{{ t["cms.admin.pages.filter_apply"] }}</button>
+      </form>
       {% if pages %}
       <div class="table-responsive">
         <table class="table table-sm align-middle">
@@ -33,9 +50,12 @@
               <th>{{ t["cms.admin.pages.title_label"] }}</th>
               <th>{{ t["cms.admin.pages.slug"] }}</th>
               <th>{{ t["cms.admin.pages.lang"] }}</th>
+              <th>{{ t["cms.admin.pages.category"] }}</th>
               <th>{{ t["cms.admin.pages.access"] }}</th>
               <th>{{ t["cms.admin.pages.status"] }}</th>
               <th>{{ t["cms.admin.pages.root"] }}</th>
+              <th>{{ t["cms.admin.pages.updated"] }}</th>
+              <th>{{ t["cms.admin.pages.url"] }}</th>
               <th>{{ t["cms.admin.pages.actions"] }}</th>
             </tr>
           </thead>
@@ -46,14 +66,24 @@
               <td>{{ page.title }}</td>
               <td>{{ page.slug }}</td>
               <td>{{ page.lang }}</td>
+              <td>{{ category_map.get(page.category_id).title if page.category_id and category_map.get(page.category_id) else "-" }}</td>
               <td>{{ t["cms.access." ~ page.access_level.value] }}</td>
               <td>{{ t["status.enabled"] if page.is_published else t["status.disabled"] }}</td>
               <td>{{ t["status.enabled"] if page.is_root else t["status.disabled"] }}</td>
+              <td>{{ page.updated_at }}</td>
+              <td>
+                <div class="small">
+                  {% if page.is_root %}
+                  <div>/</div>
+                  {% endif %}
+                  <div>/{{ page.lang }}/pages/{{ page.slug }}</div>
+                </div>
+              </td>
               <td>
                 <div class="d-flex flex-wrap gap-2">
-                  <a class="btn btn-outline-secondary btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}">{{ t["cms.admin.pages.edit"] }}</a>
-                  <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
-                  <form method="post" action="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/delete">
+                  <a class="btn btn-outline-secondary btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}">{{ t["cms.admin.pages.edit"] }}</a>
+                  <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
+                  <form method="post" action="/{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}/delete" onsubmit="return confirm('{{ t["cms.admin.confirm_delete"] }}')">
                     <button class="btn btn-outline-danger btn-sm" type="submit">{{ t["cms.admin.pages.delete"] }}</button>
                   </form>
                 </div>

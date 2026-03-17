@@ -16,11 +16,11 @@
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div class="section-title">{{ t["cms.admin.pages.form"] }}</div>
         {% if page %}
-        <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
+        <a class="btn btn-outline-info btn-sm" href="/{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}/preview">{{ t["cms.admin.pages.preview"] }}</a>
         {% endif %}
       </div>
 
-      <form method="post" action="/{% if page %}{{ lang }}/admin_panel/module_cms_module/{{ page.id }}/update{% else %}{{ lang }}/admin_panel/module_cms_module/create{% endif %}">
+      <form method="post" action="/{% if page %}{{ lang }}/admin_panel/module_cms_module/pages/{{ page.id }}/update{% else %}{{ lang }}/admin_panel/module_cms_module/create{% endif %}">
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.title_label"] }}</label>
           <input class="form-control" id="cmsTitle" name="title" type="text" value="{{ page.title if page else "" }}" required />
@@ -32,6 +32,12 @@
             <button class="btn btn-outline-secondary" type="button" id="cmsSlugGenerate">{{ t["cms.admin.pages.slug_generate"] }}</button>
           </div>
           <div class="form-hint">{{ t["cms.admin.pages.slug_hint"] }}</div>
+          <div
+            class="form-hint cms-slug-status"
+            id="cmsSlugStatus"
+            data-auto="{{ t["cms.admin.pages.slug_auto"] }}"
+            data-manual="{{ t["cms.admin.pages.slug_manual"] }}"
+          ></div>
         </div>
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.meta_title"] }}</label>
@@ -45,11 +51,28 @@
           <label class="form-label">{{ t["cms.admin.pages.meta_keywords"] }}</label>
           <input class="form-control" name="meta_keywords" type="text" value="{{ page.meta_keywords if page else "" }}" />
         </div>
+        <div class="border rounded p-3 mb-3">
+          <div class="section-title mb-2">{{ t["cms.admin.pages.seo_preview"] }}</div>
+          <div class="fw-semibold" id="cmsPreviewTitle">{{ page.meta_title or page.title if page else "" }}</div>
+          <div class="text-muted small" id="cmsPreviewUrl">/{{ page.lang if page else lang }}/pages/{{ page.slug if page else "" }}</div>
+          <div class="text-muted" id="cmsPreviewDesc">{{ page.meta_description if page else "" }}</div>
+        </div>
         <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.lang"] }}</label>
           <select class="form-select" name="page_lang" required>
             <option value="ru" {% if page and page.lang == "ru" %}selected{% endif %}>RU</option>
             <option value="en" {% if page and page.lang == "en" %}selected{% endif %}>EN</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.category"] }}</label>
+          <select class="form-select" name="category_id">
+            <option value="">{{ t["cms.admin.pages.category_none"] }}</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}" {% if page and page.category_id == category.id %}selected{% endif %}>
+              {{ category.title }} ({{ category.lang }})
+            </option>
+            {% endfor %}
           </select>
         </div>
         <div class="mb-2">
@@ -78,8 +101,20 @@
           </div>
         </div>
         <div class="mb-2">
+          <label class="form-label">{{ t["cms.admin.pages.template"] }}</label>
+          <select class="form-select" name="template_name">
+            <option value="">{{ t["cms.admin.pages.template_default"] }}</option>
+            {% for template in page_templates %}
+            <option value="{{ template }}" {% if page and page.template_name == template %}selected{% endif %}>
+              {{ template }}
+            </option>
+            {% endfor %}
+          </select>
+          <div class="form-hint mt-2">{{ t["cms.admin.pages.template_hint"] }}</div>
+        </div>
+        <div class="mb-2">
           <label class="form-label">{{ t["cms.admin.pages.content"] }}</label>
-          <textarea class="form-control" name="content_html" rows="12" required>{{ page.content_html if page else "" }}</textarea>
+          <textarea class="form-control" id="cmsContent" name="content_html" rows="12">{{ page.content_html if page else "" }}</textarea>
         </div>
         <div class="d-flex flex-wrap gap-4 mb-3">
           <div class="form-check">
@@ -105,6 +140,13 @@
   const titleInput = document.getElementById("cmsTitle");
   const slugInput = document.getElementById("cmsSlug");
   const slugButton = document.getElementById("cmsSlugGenerate");
+  const previewTitle = document.getElementById("cmsPreviewTitle");
+  const previewDesc = document.getElementById("cmsPreviewDesc");
+  const previewUrl = document.getElementById("cmsPreviewUrl");
+  const metaTitleInput = document.querySelector("[name='meta_title']");
+  const metaDescInput = document.querySelector("[name='meta_description']");
+  const langSelect = document.querySelector("[name='page_lang']");
+  const slugStatus = document.getElementById("cmsSlugStatus");
 
   const slugify = (value) => {
     if (!value) return "";
@@ -127,7 +169,43 @@
     const suggestion = slugify(titleInput.value);
     if (suggestion) {
       slugInput.value = suggestion;
+      if (slugStatus?.dataset.auto) slugStatus.textContent = slugStatus.dataset.auto;
     }
   });
+
+  slugInput?.addEventListener("input", () => {
+    if (!slugInput) return;
+    slugInput.value = slugify(slugInput.value);
+    if (slugStatus?.dataset.manual) slugStatus.textContent = slugStatus.dataset.manual;
+  });
+
+  titleInput?.addEventListener("blur", () => {
+    if (!titleInput || !slugInput) return;
+    if (slugInput.value.trim()) return;
+    const suggestion = slugify(titleInput.value);
+    if (suggestion) {
+      slugInput.value = suggestion;
+      if (slugStatus?.dataset.auto) slugStatus.textContent = slugStatus.dataset.auto;
+    }
+  });
+
+  const updatePreview = () => {
+    const metaTitle = metaTitleInput?.value?.trim();
+    const title = titleInput?.value?.trim();
+    if (previewTitle) previewTitle.textContent = metaTitle || title || "";
+    if (previewDesc) previewDesc.textContent = metaDescInput?.value?.trim() || "";
+    if (previewUrl && slugInput && langSelect) {
+      const slug = slugInput.value.trim();
+      const lang = langSelect.value || "ru";
+      previewUrl.textContent = `/${lang}/pages/${slug}`;
+    }
+  };
+
+  [titleInput, slugInput, metaTitleInput, metaDescInput, langSelect].forEach((input) => {
+    input?.addEventListener("input", updatePreview);
+    input?.addEventListener("change", updatePreview);
+  });
+  updatePreview();
+
 </script>
 {% endblock %}

@@ -54,6 +54,10 @@
   "verify.resend.title": "Resend Verification",
   "verify.resend.email": "Email",
   "verify.resend.submit": "Resend Email",
+  "verify.success.title": "Email Verified",
+  "verify.success.desc": "Your email has been verified successfully.",
+  "verify.success.login": "Go to Login",
+  "verify.success.profile": "Go to Profile",
 
   "reset.title": "Password Reset",
   "reset.desc": "We will generate a temporary password and send it to your email.",
@@ -191,5 +195,20 @@
   "web.msg.role_updated": "Role updated",
   "web.msg.user_updated": "User updated",
   "web.msg.user_activated": "User activated",
-  "web.msg.user_deactivated": "User deactivated"
+  "web.msg.user_deactivated": "User deactivated",
+  "error.500.title": "Something went wrong",
+  "error.500.desc": "We ran into a server error. Please try again later.",
+  "error.500.home": "Back to Home",
+  "error.404.title": "Page not found",
+  "error.404.desc": "We couldn't find the page you were looking for.",
+  "error.404.home": "Back to Home",
+  "error.502.title": "Bad gateway",
+  "error.502.desc": "The server received an invalid response. Please try again later.",
+  "error.502.home": "Back to Home",
+  "error.503.title": "Service unavailable",
+  "error.503.desc": "The service is temporarily unavailable. Please try again later.",
+  "error.503.home": "Back to Home",
+  "error.504.title": "Gateway timeout",
+  "error.504.desc": "The server took too long to respond. Please try again later.",
+  "error.504.home": "Back to Home"
 }

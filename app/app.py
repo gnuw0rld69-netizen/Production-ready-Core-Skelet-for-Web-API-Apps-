@@ -8,13 +8,16 @@ import inspect
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.openapi.docs import (
     get_redoc_html,
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
 )
+from fastapi.templating import Jinja2Templates
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -25,6 +28,7 @@ from app.core.security import InvalidTokenError, decode_token
 from app.routers import auth_router, users_router, web_admin_router, web_users_router
 from app.services.audit_service import AuditService
 from app.module_loader import load_modules
+from app.web.i18n import get_translations
 
 USER_ACTION_PATH_PREFIXES = ("/api/v1/auth", "/api/v1/users")
 USER_ID_PATH_REGEX = re.compile(r"^/api/v1/users/(?P<user_id>\d+)(?:/|$)")
@@ -34,6 +38,8 @@ audit_worker_stop_event = threading.Event()
 audit_worker_thread: threading.Thread | None = None
 
 MODULES_DIR = Path(__file__).resolve().parents[1] / "modules"
+TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 MODULES = load_modules(MODULES_DIR)
 
 
@@ -104,9 +110,66 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    max_age=settings.WEB_SESSION_HOURS * 60 * 60,
+    same_site="lax",
+    https_only=not settings.DEBUG,
+)
+
 app.state.modules = MODULES
 app.state.module_admin_entries = [m.admin_entry for m in MODULES if m.admin_entry]
 app.state.module_root_handlers = [m.root_handler for m in MODULES if m.root_handler]
+
+
+def _lang_from_path(path: str) -> str:
+    if path.startswith("/ru"):
+        return "ru"
+    if path.startswith("/en"):
+        return "en"
+    return "ru"
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404 and request.url.path.startswith(("/ru", "/en")):
+        lang = _lang_from_path(request.url.path)
+        t = get_translations(lang)
+        return templates.TemplateResponse(
+            "errors/404.html",
+            {"request": request, "lang": lang, "t": t, "nav_user": None, "user": None},
+            status_code=404,
+        )
+    if exc.status_code >= 500 and request.url.path.startswith(("/ru", "/en")):
+        lang = _lang_from_path(request.url.path)
+        t = get_translations(lang)
+        template = "errors/500.html"
+        if exc.status_code == 502:
+            template = "errors/502.html"
+        elif exc.status_code == 503:
+            template = "errors/503.html"
+        elif exc.status_code == 504:
+            template = "errors/504.html"
+        return templates.TemplateResponse(
+            template,
+            {"request": request, "lang": lang, "t": t, "nav_user": None, "user": None},
+            status_code=exc.status_code,
+        )
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    if request.url.path.startswith(("/ru", "/en")):
+        lang = _lang_from_path(request.url.path)
+        t = get_translations(lang)
+        return templates.TemplateResponse(
+            "errors/500.html",
+            {"request": request, "lang": lang, "t": t, "nav_user": None, "user": None},
+            status_code=500,
+        )
+    return JSONResponse({"detail": "Internal Server Error"}, status_code=500)
 
 if settings.CORS_ORIGINS:
     app.add_middleware(

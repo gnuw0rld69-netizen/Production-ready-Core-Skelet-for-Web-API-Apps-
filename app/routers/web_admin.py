@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app.web.flash import pop_flash_message, set_flash_message
 from app.web.i18n import get_translations, normalize_lang
 from app.core.database import get_db
 from app.models.user import User, UserRole
@@ -21,8 +22,9 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 router = APIRouter(prefix="/{lang}/admin_panel", tags=["Web Admin"])
 
 
-def _redirect_with_message(lang: str, path: str, message: str) -> RedirectResponse:
-    return RedirectResponse(f"/{lang}{path}?message={message}", status_code=status.HTTP_303_SEE_OTHER)
+def _redirect_with_message(request: Request, lang: str, path: str, message: str) -> RedirectResponse:
+    set_flash_message(request, message)
+    return RedirectResponse(f"/{lang}{path}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _msg(lang: str, key: str, fallback: str) -> str:
@@ -45,7 +47,7 @@ def admin_home(request: Request, lang: str):
         lang = normalize_lang(lang)
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         modules = request.app.state.module_admin_entries
         return templates.TemplateResponse(
             "admin_panel/home.html",
@@ -70,7 +72,7 @@ def admin_users_page(request: Request, lang: str, role: str | None = None, user_
         lang = normalize_lang(lang)
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         modules = request.app.state.module_admin_entries
         users = []
         target_user = None
@@ -109,7 +111,7 @@ def admin_allowlist_page(request: Request, lang: str, user_id: int | None = None
         lang = normalize_lang(lang)
         t = get_translations(lang)
         admin_user = _require_admin(request, db)
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         modules = request.app.state.module_admin_entries
         target_user = None
         allowlist_entries = []
@@ -149,6 +151,7 @@ def admin_update_user(
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -156,18 +159,20 @@ def admin_update_user(
         try:
             payload = UserUpdate(email=email or None, full_name=full_name or None, password=password or None)
         except Exception as exc:
-            return _redirect_with_message(lang, "/admin_panel/users", str(exc))
+            return _redirect_with_message(request, lang, "/admin_panel/users", str(exc))
         try:
             user = UserService.update_user(db, user_id, payload)
         except ValueError as exc:
-            return _redirect_with_message(lang, "/admin_panel/users", str(exc))
+            return _redirect_with_message(request, lang, "/admin_panel/users", str(exc))
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.user_updated", "User updated"),
@@ -188,6 +193,7 @@ def admin_change_role(
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -196,6 +202,7 @@ def admin_change_role(
             role_enum = UserRole(role.strip().lower())
         except ValueError:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.invalid_role", "Invalid role"),
@@ -203,11 +210,13 @@ def admin_change_role(
         user = UserService.change_user_role(db, user_id, role_enum)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.role_updated", "Role updated"),
@@ -223,6 +232,7 @@ def admin_activate_user(request: Request, lang: str, user_id: int = Form(...)):
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -230,11 +240,13 @@ def admin_activate_user(request: Request, lang: str, user_id: int = Form(...)):
         user = UserService.activate_user(db, user_id)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.user_activated", "User activated"),
@@ -250,6 +262,7 @@ def admin_deactivate_user(request: Request, lang: str, user_id: int = Form(...))
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -257,11 +270,13 @@ def admin_deactivate_user(request: Request, lang: str, user_id: int = Form(...))
         user = UserService.deactivate_user(db, user_id)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.user_deactivated", "User deactivated"),
@@ -277,6 +292,7 @@ def admin_verify_email(request: Request, lang: str, user_id: int = Form(...)):
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -284,11 +300,13 @@ def admin_verify_email(request: Request, lang: str, user_id: int = Form(...)):
         user = UserService.verify_email_manually(db, user_id)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.email_verified", "Email verified"),
@@ -304,6 +322,7 @@ def admin_disable_two_factor(request: Request, lang: str, user_id: int = Form(..
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -311,11 +330,13 @@ def admin_disable_two_factor(request: Request, lang: str, user_id: int = Form(..
         user = UserService.disable_two_factor(db, user_id)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/users",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/users",
             _msg(lang, "web.msg.twofa_disabled", "2FA disabled"),
@@ -337,6 +358,7 @@ def admin_allowlist_add(
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -350,8 +372,9 @@ def admin_allowlist_add(
                 is_active=True,
             )
         except ValueError as exc:
-            return _redirect_with_message(lang, "/admin_panel/allowlist", str(exc))
+            return _redirect_with_message(request, lang, "/admin_panel/allowlist", str(exc))
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/allowlist",
             _msg(lang, "web.msg.allowlist_added", "Allowed IP added"),
@@ -375,6 +398,7 @@ def admin_allowlist_update(
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -389,14 +413,16 @@ def admin_allowlist_update(
                 is_active=is_active,
             )
         except ValueError as exc:
-            return _redirect_with_message(lang, "/admin_panel/allowlist", str(exc))
+            return _redirect_with_message(request, lang, "/admin_panel/allowlist", str(exc))
         if not entry:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/allowlist",
                 _msg(lang, "web.msg.allowlist_entry_not_found", "Allowed IP entry not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/allowlist",
             _msg(lang, "web.msg.allowlist_updated", "Allowed IP updated"),
@@ -417,6 +443,7 @@ def admin_allowlist_delete(
         lang = normalize_lang(lang)
         if not _require_admin(request, db):
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -424,11 +451,13 @@ def admin_allowlist_delete(
         deleted = UserIpAllowlistService.delete_entry(db, user_id, entry_id)
         if not deleted:
             return _redirect_with_message(
+                request,
                 lang,
                 "/admin_panel/allowlist",
                 _msg(lang, "web.msg.allowlist_entry_not_found", "Allowed IP entry not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/admin_panel/allowlist",
             _msg(lang, "web.msg.allowlist_deleted", "Allowed IP deleted"),

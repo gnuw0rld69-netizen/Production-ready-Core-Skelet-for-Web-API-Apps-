@@ -24,6 +24,7 @@ from app.services.email_service import EmailService
 from app.services.turnstile_service import TurnstileService
 from app.services.user_ip_allowlist_service import UserIpAllowlistService
 from app.services.user_service import UserService
+from app.web.flash import pop_flash_message, set_flash_message
 from app.web.i18n import get_translations, normalize_lang
 from app.web.session import get_current_user_from_cookie as _get_current_user_from_cookie
 
@@ -87,8 +88,9 @@ def _generate_qr_code_data_uri(data: str) -> str:
     return f"data:image/png;base64,{encoded}"
 
 
-def _redirect_with_message(lang: str, path: str, message: str) -> RedirectResponse:
-    return RedirectResponse(f"/{lang}{path}?message={message}", status_code=status.HTTP_303_SEE_OTHER)
+def _redirect_with_message(request: Request, lang: str, path: str, message: str) -> RedirectResponse:
+    set_flash_message(request, message)
+    return RedirectResponse(f"/{lang}{path}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 def _lang_path(lang: str, path: str) -> str:
@@ -99,9 +101,10 @@ def _msg(lang: str, key: str, fallback: str) -> str:
     return get_translations(lang).get(key, fallback)
 
 
-def _redirect_if_unverified(user: User | None, lang: str) -> RedirectResponse | None:
+def _redirect_if_unverified(request: Request, user: User | None, lang: str) -> RedirectResponse | None:
     if user and not user.is_verified:
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
@@ -122,10 +125,10 @@ def users_home(request: Request, lang: str):
         lang = normalize_lang(lang)
         t = get_translations(lang)
         user = _get_current_user_from_cookie(request, db, require_verified=False)
-        redirect = _redirect_if_unverified(user, lang)
+        redirect = _redirect_if_unverified(request, user, lang)
         if redirect:
             return redirect
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/home.html",
             {
@@ -156,13 +159,14 @@ def users_auth_page(request: Request, lang: str):
                 message_key = "web.msg.email_not_verified"
                 message_fallback = "Email is not verified"
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, message_key, message_fallback),
             )
         pending_user = _get_pending_two_factor_user(request, db)
         otp_step = request.query_params.get("step") == "otp" and pending_user is not None
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/login.html",
             {
@@ -195,11 +199,12 @@ def users_register_page(request: Request, lang: str):
                 message_key = "web.msg.email_not_verified"
                 message_fallback = "Email is not verified"
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, message_key, message_fallback),
             )
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/register.html",
             {
@@ -224,10 +229,10 @@ def users_reset_page(request: Request, lang: str):
         lang = normalize_lang(lang)
         t = get_translations(lang)
         user = _get_current_user_from_cookie(request, db, require_verified=False)
-        redirect = _redirect_if_unverified(user, lang)
+        redirect = _redirect_if_unverified(request, user, lang)
         if redirect:
             return redirect
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/reset.html",
             {
@@ -252,7 +257,7 @@ def users_verify_page(request: Request, lang: str):
         lang = normalize_lang(lang)
         t = get_translations(lang)
         user = _get_current_user_from_cookie(request, db, require_verified=False)
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/verify.html",
             {
@@ -278,12 +283,13 @@ def users_profile_page(request: Request, lang: str):
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.login_required", "Please login first"),
             )
         allowlist_entries = UserIpAllowlistService.list_for_user(db, user.id)
-        message = request.query_params.get("message")
+        message = pop_flash_message(request)
         return templates.TemplateResponse(
             "users/profile.html",
             {
@@ -315,11 +321,12 @@ def users_login(
     try:
         lang = normalize_lang(lang)
         user = _get_current_user_from_cookie(request, db, require_verified=False)
-        redirect = _redirect_if_unverified(user, lang)
+        redirect = _redirect_if_unverified(request, user, lang)
         if redirect:
             return redirect
         if not TurnstileService.verify(turnstile_response, get_client_ip(request)):
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "captcha.required", "Captcha required"),
@@ -328,6 +335,7 @@ def users_login(
             normalized_email = validate_email(email).email
         except EmailNotValidError:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.email_required", "Email is required for login"),
@@ -336,12 +344,14 @@ def users_login(
         user = AuthService.authenticate_user(db, normalized_email, password)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.invalid_credentials", "Incorrect email or password"),
             )
         if not user.is_active:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.inactive_user", "Inactive user"),
@@ -349,8 +359,9 @@ def users_login(
         if user.is_two_factor_enabled:
             pending_token = _create_two_factor_token(user.id)
             message = _msg(lang, "web.msg.otp_required", "2FA code required")
+            set_flash_message(request, message)
             response = RedirectResponse(
-                f"/{lang}/users/auth?message={message}&step=otp",
+                f"/{lang}/users/auth?step=otp",
                 status_code=status.HTTP_303_SEE_OTHER,
             )
             response.set_cookie(
@@ -370,6 +381,7 @@ def users_login(
             message_key = "web.msg.email_not_verified"
             message_fallback = "Email is not verified"
         response = _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, message_key, message_fallback),
@@ -384,9 +396,10 @@ def users_login(
 
 
 @router.post("/auth/logout")
-def users_logout(lang: str):
+def users_logout(request: Request, lang: str):
     lang = normalize_lang(lang)
     response = _redirect_with_message(
+        request,
         lang,
         "/users/auth",
         _msg(lang, "web.msg.logged_out", "Logged out"),
@@ -405,6 +418,7 @@ def users_login_otp(request: Request, lang: str, otp_code: str = Form(...)):
         user = _get_pending_two_factor_user(request, db)
         if not user:
             response = _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.otp_session_missing", "2FA session expired"),
@@ -413,8 +427,9 @@ def users_login_otp(request: Request, lang: str, otp_code: str = Form(...)):
             return response
         if not AuthService.verify_two_factor_code(user, otp_code):
             message = _msg(lang, "web.msg.invalid_otp", "Invalid 2FA code")
+            set_flash_message(request, message)
             return RedirectResponse(
-                f"/{lang}/users/auth?message={message}&step=otp",
+                f"/{lang}/users/auth?step=otp",
                 status_code=status.HTTP_303_SEE_OTHER,
             )
         UserService.update_last_login(db, user)
@@ -425,6 +440,7 @@ def users_login_otp(request: Request, lang: str, otp_code: str = Form(...)):
             message_key = "web.msg.email_not_verified"
             message_fallback = "Email is not verified"
         response = _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, message_key, message_fallback),
@@ -446,6 +462,7 @@ def users_refresh(request: Request, lang: str):
         refresh_token = request.cookies.get("refresh_token")
         if not refresh_token:
             response = _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.refresh_missing", "Refresh token missing"),
@@ -456,6 +473,7 @@ def users_refresh(request: Request, lang: str):
         new_access = AuthService.refresh_access_token(db, refresh_token)
         if not new_access:
             response = _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.refresh_invalid", "Refresh token invalid"),
@@ -464,6 +482,7 @@ def users_refresh(request: Request, lang: str):
             response.delete_cookie("refresh_token")
             return response
         response = _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.token_refreshed", "Token refreshed"),
@@ -490,6 +509,7 @@ def users_register(
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/register",
                 _msg(lang, "web.msg.already_authenticated", "You are already authenticated"),
@@ -497,11 +517,11 @@ def users_register(
         try:
             payload = UserCreate(email=email, username=username, full_name=full_name, password=password)
         except Exception as exc:
-            return _redirect_with_message(lang, "/users/register", str(exc))
+            return _redirect_with_message(request, lang, "/users/register", str(exc))
         try:
             created_user = UserService.create_user(db, payload)
         except ValueError as exc:
-            return _redirect_with_message(lang, "/users/register", str(exc))
+            return _redirect_with_message(request, lang, "/users/register", str(exc))
 
         token = AuthService.generate_email_verification_token(created_user)
         db.add(created_user)
@@ -510,6 +530,7 @@ def users_register(
         subject, text_body, html_body = EmailService.build_verification_email(verification_link)
         EmailService.send_email(created_user.email, subject, text_body, html_body)
         return _redirect_with_message(
+            request,
             lang,
             "/users/auth",
             _msg(lang, "web.msg.registration_success", "Registration successful. Check your email"),
@@ -519,7 +540,7 @@ def users_register(
 
 
 @router.post("/register/resend-verification")
-def users_resend_verification(lang: str, email: str = Form(...)):
+def users_resend_verification(request: Request, lang: str, email: str = Form(...)):
     db = next(get_db())
     try:
         lang = normalize_lang(lang)
@@ -532,6 +553,7 @@ def users_resend_verification(lang: str, email: str = Form(...)):
             subject, text_body, html_body = EmailService.build_verification_email(verification_link)
             EmailService.send_email(user.email, subject, text_body, html_body)
         return _redirect_with_message(
+            request,
             lang,
             "/users/verify",
             _msg(lang, "web.msg.verification_sent", "If your account exists, a verification email was sent"),
@@ -548,21 +570,29 @@ def users_verify_email(request: Request, lang: str, token: str = Form(...)):
         verified_user = AuthService.verify_email_token(db, token)
         if not verified_user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/verify",
                 _msg(lang, "web.msg.verification_invalid", "Invalid or expired verification token"),
             )
         current_user = _get_current_user_from_cookie(request, db, require_verified=False)
+        next_url = f"/{lang}/users/auth"
+        next_label = _msg(lang, "verify.success.login", "Go to Login")
         if current_user:
-            return _redirect_with_message(
-                lang,
-                "/users/profile",
-                _msg(lang, "web.msg.email_verified", "Email verified successfully"),
-            )
-        return _redirect_with_message(
-            lang,
-            "/users/auth",
-            _msg(lang, "web.msg.email_verified", "Email verified successfully"),
+            next_url = f"/{lang}/users/profile"
+            next_label = _msg(lang, "verify.success.profile", "Go to Profile")
+        t = get_translations(lang)
+        return templates.TemplateResponse(
+            "users/verify_success.html",
+            {
+                "request": request,
+                "lang": lang,
+                "t": t,
+                "next_url": next_url,
+                "next_label": next_label,
+                "nav_user": current_user,
+                "user": current_user,
+            },
         )
     finally:
         db.close()
@@ -580,6 +610,7 @@ def users_reset_password(
         lang = normalize_lang(lang)
         if not TurnstileService.verify(turnstile_response, get_client_ip(request)):
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/reset",
                 _msg(lang, "captcha.required", "Captcha required"),
@@ -590,6 +621,7 @@ def users_reset_password(
             subject, text_body, html_body = EmailService.build_password_reset_email(new_password)
             EmailService.send_email(user.email, subject, text_body, html_body)
         return _redirect_with_message(
+            request,
             lang,
             "/users/reset",
             _msg(lang, "web.msg.reset_sent", "If your account exists, a new password was sent"),
@@ -612,30 +644,35 @@ def users_update_profile(
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
@@ -643,18 +680,20 @@ def users_update_profile(
         try:
             payload = UserUpdate(email=email or None, full_name=full_name or None, password=password or None)
         except Exception as exc:
-            return _redirect_with_message(lang, "/users/profile", str(exc))
+            return _redirect_with_message(request, lang, "/users/profile", str(exc))
         try:
             updated = UserService.update_user(db, user.id, payload)
         except ValueError as exc:
-            return _redirect_with_message(lang, "/users/profile", str(exc))
+            return _redirect_with_message(request, lang, "/users/profile", str(exc))
         if not updated:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.profile_updated", "Profile updated"),
@@ -676,12 +715,14 @@ def users_change_password(
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
@@ -689,9 +730,10 @@ def users_change_password(
         try:
             payload = PasswordChangeRequest(current_password=current_password, new_password=new_password)
         except Exception as exc:
-            return _redirect_with_message(lang, "/users/profile", str(exc))
+            return _redirect_with_message(request, lang, "/users/profile", str(exc))
         if not verify_password(payload.current_password, user.hashed_password):
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.password_incorrect", "Incorrect current password"),
@@ -699,11 +741,13 @@ def users_change_password(
         updated = UserService.update_user(db, user.id, UserUpdate(password=payload.new_password))
         if not updated:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.user_not_found", "User not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.password_changed", "Password changed"),
@@ -721,18 +765,21 @@ def users_setup_two_factor(request: Request, lang: str):
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if user.is_two_factor_enabled:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.twofa_already_enabled", "2FA is already enabled"),
@@ -776,30 +823,35 @@ def users_enable_two_factor(request: Request, lang: str, code: str = Form(...)):
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if user.is_two_factor_enabled:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.twofa_already_enabled", "2FA is already enabled"),
             )
         if not user.two_factor_secret:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.twofa_setup_required", "2FA setup is required before enabling"),
             )
         if not AuthService.verify_two_factor_code(user, code):
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.invalid_otp", "Invalid 2FA code"),
@@ -808,6 +860,7 @@ def users_enable_two_factor(request: Request, lang: str, code: str = Form(...)):
         db.add(user)
         db.commit()
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.twofa_enabled", "2FA enabled successfully"),
@@ -824,24 +877,28 @@ def users_disable_two_factor(request: Request, lang: str, code: str = Form(...))
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
             )
         if not user.is_two_factor_enabled:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.twofa_not_enabled", "2FA is not enabled"),
             )
         if not AuthService.verify_two_factor_code(user, code):
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.invalid_otp", "Invalid 2FA code"),
@@ -851,6 +908,7 @@ def users_disable_two_factor(request: Request, lang: str, code: str = Form(...))
         db.add(user)
         db.commit()
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.twofa_disabled", "2FA disabled successfully"),
@@ -872,12 +930,14 @@ def users_allowlist_add(
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
             )
         if not user.is_verified:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.email_not_verified", "Email is not verified"),
@@ -891,8 +951,9 @@ def users_allowlist_add(
                 is_active=True,
             )
         except ValueError as exc:
-            return _redirect_with_message(lang, "/users/profile", str(exc))
+            return _redirect_with_message(request, lang, "/users/profile", str(exc))
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.allowlist_added", "Allowed IP added"),
@@ -916,6 +977,7 @@ def users_allowlist_update(
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -930,14 +992,16 @@ def users_allowlist_update(
                 is_active=is_active,
             )
         except ValueError as exc:
-            return _redirect_with_message(lang, "/users/profile", str(exc))
+            return _redirect_with_message(request, lang, "/users/profile", str(exc))
         if not entry:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.allowlist_entry_not_found", "Allowed IP entry not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.allowlist_updated", "Allowed IP updated"),
@@ -954,6 +1018,7 @@ def users_allowlist_delete(request: Request, lang: str, entry_id: int = Form(...
         user = _get_current_user_from_cookie(request, db, require_verified=False)
         if not user:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/auth",
                 _msg(lang, "web.msg.unauthorized", "Unauthorized"),
@@ -961,11 +1026,13 @@ def users_allowlist_delete(request: Request, lang: str, entry_id: int = Form(...
         deleted = UserIpAllowlistService.delete_entry(db, user.id, entry_id)
         if not deleted:
             return _redirect_with_message(
+                request,
                 lang,
                 "/users/profile",
                 _msg(lang, "web.msg.allowlist_entry_not_found", "Allowed IP entry not found"),
             )
         return _redirect_with_message(
+            request,
             lang,
             "/users/profile",
             _msg(lang, "web.msg.allowlist_deleted", "Allowed IP deleted"),
